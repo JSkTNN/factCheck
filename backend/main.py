@@ -3,7 +3,9 @@ from bs4 import BeautifulSoup # pyright: ignore[reportMissingImports]
 from fastapi import FastAPI # pyright: ignore[reportMissingImports]
 from fastapi.middleware.cors import CORSMiddleware # pyright: ignore[reportMissingImports]
 from pydantic import BaseModel # pyright: ignore[reportMissingImports]
-
+from multiprocessing import Pipe, Process
+from run_agent import webagent
+"""
 app = FastAPI()
 
 headers = {'User-Agent': 'Mozilla/5.0'}
@@ -44,3 +46,17 @@ async def root():
 @app.get("/article")
 async def get_article():
     return {"content": "This is text served from FastAPI!"}
+"""
+
+if __name__ == "__main__":
+    parent_conn, child_conn = Pipe()
+
+    p = Process(target=webagent, args=(child_conn,))
+    p.start()
+
+    text_to_send = "This is the text from main.py"
+    print("Main.py sending text to agent...")
+    parent_conn.send(text_to_send)
+
+    p.join()
+    print("Agent finished processing.")
