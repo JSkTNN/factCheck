@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup # pyright: ignore[reportMissingImports]
 from fastapi import FastAPI # pyright: ignore[reportMissingImports]
 from fastapi.middleware.cors import CORSMiddleware # pyright: ignore[reportMissingImports]
 from pydantic import BaseModel # pyright: ignore[reportMissingImports]
+from typing import Dict
+
 
 app = FastAPI()
 
@@ -15,6 +17,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class TextRequest(BaseModel):
+    text: str
 
 class URLrequest(BaseModel):
     url:str
@@ -36,6 +41,14 @@ async def process_url(request: URLrequest):
     except Exception as err:
         return {"error": str(err)}
     return {"received_url": request.url}
+
+@app.post("/process-text")
+async def process_text(request: TextRequest) -> Dict:
+    # This is where you send the text to your AI ADK
+    page_text = request.text
+    # For now, just return a dummy summary
+    summary = f"Received {len(page_text)} characters of text."
+    return {"summary": summary}
 
 @app.get("/")
 async def root():

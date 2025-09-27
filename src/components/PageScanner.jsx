@@ -1,56 +1,49 @@
 import { useState } from 'react'
-import { fetcherAgent } from '../agents/fetcherAgent'
-import { analyzerAgent } from '../agents/analyzerAgent'
 
-export default function PageScanner({ msg, url, onResponse }) {
+export default function PageScanner({ msg, url }) {
   const [loading, setLoading] = useState(false)
   const [summary, setSummary] = useState('')
 
-  const sendUrl = async () => {
-    try {
-      const res = await fetch("http://127.0.0.1:8000/process-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-      const data = await res.json();
-
-      onResponse(data.received_url);
-    } catch (err) {
-      console.error("Error sending URL:", err);
-    }
-  };
-
-  const handleScan = () => {
+  const handleScan = async () => {
     setLoading(true)
     setSummary('')
 
-    const pageHTML = document.querySelector('article')?.innerHTML || document.body.innerHTML || ''
+    // Grab page text
+    const pageText = document.querySelector('article')?.innerText || document.body.innerText || ''
 
-    fetcherAgent(pageHTML, async (cleanedText) => {
-      const result = await analyzerAgent(cleanedText)
-      setSummary(result)
-      setLoading(false)
-    })
+    try {
+      const res = await fetch("http://127.0.0.1:8000/process-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: pageText }),
+      })
+      const data = await res.json()
+      setSummary(data.summary || "No summary returned")
+    } catch (err) {
+      console.error("Error sending text:", err)
+      setSummary("Failed to get summary from backend")
+    }
+
+    setLoading(false)
   }
 
   return (
-    <div style={{ padding: '0.5rem' }}>
-      {/* Fixed message above the button */}
+    <div style={{ padding: '0.5rem', textAlign: 'center' }}>
       <h2>{msg}</h2>
 
-      {/* Button showing the URL */}
       <button
-        onClick={sendUrl}
+        onClick={handleScan}
         disabled={loading}
         style={{
-          width: '250px',          // fixed width
-          whiteSpace: 'nowrap',    // prevent wrapping
-          overflow: 'hidden',      // hide overflow
-          textOverflow: 'ellipsis',// show "..." if too long
+          width: '250px',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
           padding: '0.5rem',
+          margin: '1rem auto',
+          display: 'block',
         }}
-        title={url} // full URL on hover
+        title={url}
       >
         {loading ? 'Scanning...' : url || 'Loading...'}
       </button>
