@@ -18,7 +18,9 @@ export default defineManifest({
     'activeTab',
     'scripting',
   ],
-  action: {},
+  action: {
+    default_title: 'Open Side Panel'
+  },
   content_scripts: [{
     js: ['src/content/main.jsx'],
     matches: ['https://*/*'],
