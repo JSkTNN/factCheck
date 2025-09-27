@@ -16,12 +16,7 @@ export default defineManifest({
     'contentSettings',
     'tabs',
   ],
-  action: {
-    default_icon: {
-      48: 'public/logo.png',
-    },
-    default_popup: 'src/popup/index.html',
-  },
+  action: {},
   content_scripts: [{
     js: ['src/content/main.jsx'],
     matches: ['https://*/*'],
