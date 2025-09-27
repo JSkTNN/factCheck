@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Allow your extension to fetch from FastAPI (in dev: allow all)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  #later change to ["chrome-extension://abcd1234"]
