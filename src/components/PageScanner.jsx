@@ -2,9 +2,24 @@ import { useState } from 'react'
 import { fetcherAgent } from '../agents/fetcherAgent'
 import { analyzerAgent } from '../agents/analyzerAgent'
 
-export default function PageScanner({ msg, url }) {
+export default function PageScanner({ msg, url, onResponse }) {
   const [loading, setLoading] = useState(false)
   const [summary, setSummary] = useState('')
+
+  const sendUrl = async () => {
+    try {
+      const res = await fetch("http://127.0.0.1:8000/process-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+
+      onResponse(data.received_url);
+    } catch (err) {
+      console.error("Error sending URL:", err);
+    }
+  };
 
   const handleScan = () => {
     setLoading(true)
@@ -26,7 +41,7 @@ export default function PageScanner({ msg, url }) {
 
       {/* Button showing the URL */}
       <button
-        onClick={handleScan}
+        onClick={sendUrl}
         disabled={loading}
         style={{
           width: '250px',          // fixed width
