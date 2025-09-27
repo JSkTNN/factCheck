@@ -8,9 +8,13 @@ export default defineManifest({
   icons: {
     48: 'public/logo.png',
   },
+  background: {
+    service_worker: "src/background.js",
+  },
   permissions: [
     'sidePanel',
     'contentSettings',
+    'tabs',
   ],
   action: {
     default_icon: {
