@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { fetcherAgent } from '../agents/fetcherAgent'
 import { analyzerAgent } from '../agents/analyzerAgent'
 
-export default function PageScanner({ msg }) {
+export default function PageScanner({ msg, url }) {
   const [loading, setLoading] = useState(false)
   const [summary, setSummary] = useState('')
 
@@ -21,10 +21,25 @@ export default function PageScanner({ msg }) {
 
   return (
     <div style={{ padding: '0.5rem' }}>
+      {/* Fixed message above the button */}
       <h2>{msg}</h2>
-      <button onClick={handleScan} disabled={loading}>
-        {loading ? 'Scanning...' : 'Scan This Page'}
+
+      {/* Button showing the URL */}
+      <button
+        onClick={handleScan}
+        disabled={loading}
+        style={{
+          width: '250px',          // fixed width
+          whiteSpace: 'nowrap',    // prevent wrapping
+          overflow: 'hidden',      // hide overflow
+          textOverflow: 'ellipsis',// show "..." if too long
+          padding: '0.5rem',
+        }}
+        title={url} // full URL on hover
+      >
+        {loading ? 'Scanning...' : url || 'Loading...'}
       </button>
+
       {summary && (
         <div style={{ marginTop: '1rem' }}>
           <h3>AI Summary:</h3>
