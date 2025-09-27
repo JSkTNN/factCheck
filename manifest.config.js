@@ -15,6 +15,8 @@ export default defineManifest({
     'sidePanel',
     'contentSettings',
     'tabs',
+    'activeTab',
+    'scripting',
   ],
   action: {
     default_icon: {
