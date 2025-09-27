@@ -1,10 +1,13 @@
 import Logo from '@/assets/crx.svg'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 
 function App() {
   const [show, setShow] = useState(false)
   const toggle = () => setShow(!show)
+
+  
+
 
   return (
     <div className="popup-container">
@@ -16,6 +19,7 @@ function App() {
       <button className="toggle-button" onClick={toggle}>
         <img src={Logo} alt="CRXJS logo" className="button-icon" />
       </button>
+      
     </div>
   )
 }
