@@ -7,14 +7,7 @@ export default function PageScanner({ msg, url, onScan, loading }) {
       <button
         onClick={onScan}
         disabled={loading || !url || url.startsWith('chrome')}
-        style={{
-          width: '250px',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          padding: '0.5rem',
-          cursor: loading || !url || url.startsWith('chrome') ? 'not-allowed' : 'pointer',
-        }}
+        class='btn'
         title={url}
       >
         {loading ? 'Scanning...' : 'Scan this page'}

@@ -117,7 +117,8 @@ claim_extractor_agent = LlmAgent(
     name="ClaimExtractorAgent",
     model=GEMINI_MODEL,
     instruction="""
-    You are a text analysis AI. Extract all distinct, verifiable claims from the text: {{website_text}}. Try to keep the number of claims low.
+    You are a text analysis AI. Extract all distinct, verifiable claims from the text: {{website_text}}.
+    Try to keep the number of claims lower than 5.
     
     Return them as a JSON formatted list of strings. 
     Example: ["Claim one.", "Claim two is a fact."]
