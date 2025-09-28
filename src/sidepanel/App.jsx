@@ -31,11 +31,11 @@ export default function App() {
 
   return (
     <div style={{ padding: '1rem', fontFamily: 'sans-serif' }}>
-      <h1 class = "gradient-text">Fact Checker</h1>
+      <h1 class = "gradient-text">Truth Meter</h1>
 
       {/* PageScanner handles scanning, but sends text & summary up to App */}
       <PageScanner
-        msg="Scan this page for credibility report."
+        msg="Scan for credibility report."
         url={url}
         onText={(text) => setPageText(text)}
         onSummary={(summary) => setSummary(summary)}
