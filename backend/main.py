@@ -54,9 +54,16 @@ if __name__ == "__main__":
     p = Process(target=webagent, args=(child_conn,))
     p.start()
 
-    text_to_send = "This is the text from main.py"
+    text_to_send = (
+        "A recent study published in the New England Journal of Medicine has found that the experimental drug 'Cardia-7' "
+        "significantly reduces the risk of major cardiovascular events by up to 40 percent in high-risk patients. "
+        "The double-blind, placebo-controlled trial involved over 10,000 participants across 20 countries. "
+        "Lead researcher Dr. Alistair Finch stated, 'These results represent a monumental step forward in preventative cardiology.' "
+        "The study was funded by the National Institutes of Health and pharmaceutical company InnovateHealth."
+    )
+
+
     print("Main.py sending text to agent...")
     parent_conn.send(text_to_send)
-
     p.join()
     print("Agent finished processing.")

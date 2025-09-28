@@ -1,78 +1,209 @@
 import asyncio
-from multiprocessing import Pipe, Process
-"""
-from google.adk.cli.utils.agent_loader import AgentLoader
+import os
+import json
+from dotenv import load_dotenv
 from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService 
-# FIX: Import Content/Part from the underlying Generative AI types
-from google.genai import types 
+from google.adk.sessions import InMemorySessionService
+from google.genai import types
+from google.genai import errors
+from multiprocessing import Pipe, Process
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-AGENT_FOLDER_NAME = "multi_tool_agent"  # This is your APP_NAME
 
-async def run_agent_once(query: str):
-    # Setup variables
-    user_id = "single_run_user"
-    session_id = "temp_session"
-    APP_NAME = AGENT_FOLDER_NAME
-    
-    # 1. Load the agent
-    root_agent = AgentLoader(agents_dir=".").load_agent(AGENT_FOLDER_NAME)
 
-    # 2. Set up a SessionService and Runner
+
+
+
+# --- Load Environment & API Key ---
+load_dotenv()
+if 'GEMINI_API_KEY' not in os.environ and 'GOOGLE_API_KEY' in os.environ:
+    os.environ['GEMINI_API_KEY'] = os.environ['GOOGLE_API_KEY']
+if 'GEMINI_API_KEY' not in os.environ:
+    raise ValueError("FATAL: GEMINI_API_KEY is missing. Check your .env file.")
+WEBSITE_TEXT_PROMPT = ""
+# --- Import your root agent and state keys ---
+GEMINI_MODEL = "gemini-2.5-flash"
+STATE_WEBSITE_TEXT = "website_text"
+STATE_CLAIMS_LIST = "claims_list"
+STATE_RAW_CLAIMS_OUTPUT = "raw_claims_output"
+STATE_CURRENT_INDEX = "current_index"
+STATE_CURRENT_CLAIM = "current_claim"
+STATE_CURRENT_ANALYSIS = "current_analysis"
+STATE_CURRENT_SCORE = "current_score"
+STATE_AGGREGATED_RESULTS = "aggregated_results"
+STATE_LOOP_STATUS = "loop_status"
+STATE_FINAL_ANALYSIS = "final_analysis"
+STATE_FINAL_SCORE = "final_score"
+
+
+# === CONFIGURATION ===
+#def webagent(child_conn):
+    #WEBSITE_TEXT_PROMPT = child_conn.recv()
+    #child_conn.close()
+APP_NAME = "credibility_checker"
+
+
+
+def score_to_color(score: int) -> str:
+    """Converts a numerical score (0-100) to a color-coded string."""
+    if score >= 80:
+        return f"🟢 High Credibility ({score}/100)"
+    elif score >= 50:
+        return f"🟡 Medium Credibility ({score}/100)"
+    else:
+        return f"🔴 Low Credibility ({score}/100)"
+
+
+
+
+
+
+
+
+async def run_credibility_agent(website_text: str):
+    """Initializes and runs the credibility agent pipeline with provided text."""
+    user_id = "test_user"
+    session_id = "test_session"
+    last_event_content = None # Initialize as None to hold the Content object
+
+
+
+
+    print(f"Starting iterative credibility analysis on provided text...\n")
+
+
+
+
+    # 1. Set up session service and runner
     session_service = InMemorySessionService()
-    
-    # ⭐ NEW FIX: Create the session explicitly
-    # This ensures 'temp_session' exists before the Runner tries to access it.
+    from agent_def.agent import root_agent
+    runner = Runner(agent=root_agent, session_service=session_service, app_name=APP_NAME)
+   
+    # FIX: Initialize STATE_AGGREGATED_RESULTS here to prevent crash if the loop is skipped (0 claims)
+    initial_state = {
+        STATE_WEBSITE_TEXT: website_text,
+        STATE_AGGREGATED_RESULTS: [],
+    }
+   
     await session_service.create_session(
-        app_name=APP_NAME, 
-        user_id=user_id,
-        session_id=session_id
+        app_name=APP_NAME, user_id=user_id, session_id=session_id, state=initial_state
     )
 
-    runner = Runner(
-        agent=root_agent,
-        session_service=session_service,
-        app_name=APP_NAME 
-    )
 
-    # Create the user message
+
+
     new_message = types.Content(
-        role='user', 
-        parts=[types.Part(text=query)]
+        role='user',
+        parts=[types.Part(text="Start the iterative credibility analysis.")]
     )
 
-    print(f"Running agent '{APP_NAME}' with query: '{query}'")
 
-    # 3. Run the agent and process the stream of events
-    final_response = ""
-    async for event in runner.run_async(
-        user_id=user_id,
-        session_id=session_id,
-        new_message=new_message
-    ):
-        # We only care about the final response event
-        if event.is_final_response() and event.content and event.content.parts:
-            # Extract the text from the parts
-            for part in event.content.parts:
-                if part.text:
-                    final_response += part.text
-            
-            print("\n--- Agent Final Response ---")
-            print(final_response)
-            return
 
-    if not final_response:
-        print("\nAgent finished, but did not yield a final text response event.")
 
-if __name__ == "__main__":
-    input_query = "What is the weather in New York?" # Changed query for easy test
-    asyncio.run(run_agent_once(input_query))
+    # 2. Run the agent
+    try:
+        print("--- Starting agent run ---")
+        async for event in runner.run_async(
+            user_id=user_id, session_id=session_id, new_message=new_message
+        ):
+            if event.author:
+                print(f"    [LOG] Agent '{event.author}' generated a '{event.__class__.__name__}'")
+            # Capture the full Content object of the final event
+            if event.content:
+                last_event_content = event.content
+           
+            # Wait 6 seconds after processing an event to avoid rate limiting.
+            if event.author:
+                await asyncio.sleep(5)
+
+
+
+
+    except Exception as e:
+        print(f"❌ An error occurred during the agent run: {e}")
+        return
+
+
+
+
+    # 3. Retrieve and display the final results
+    session = await session_service.get_session(
+        app_name=APP_NAME, user_id=user_id, session_id=session_id
+    )
+    aggregated_results = session.state.get(STATE_AGGREGATED_RESULTS, [])
+   
+    final_summary = "Summary not found."
+    final_score = 0
+   
+    try:
+        json_string = ""
+        # FIX: Extract the text from the Content object before loading JSON (fixes score discrepancy)
+        if isinstance(last_event_content, types.Content) and last_event_content.parts:
+            # The Content object holds the text in its first part
+            json_string = last_event_content.parts[0].text
+       
+        final_output_json = json.loads(json_string)
+        final_summary = final_output_json.get("final_summary", "Summary could not be parsed.")
+        final_score = int(final_output_json.get("final_score", 0))
+    except (json.JSONDecodeError, ValueError, TypeError):
+        # Print the problematic object for future debugging if needed
+        print(f"\n Could not parse final JSON output. Last content: {last_event_content}")
+
+
+
+
+    final_color = score_to_color(final_score)
+
+
+
+
+    print("\n" + "="*60)
+    print("           CREDIBILITY ANALYSIS COMPLETE")
+    print("="*60)
+
+
+
+
+    print("\n### Claim-by-Claim Breakdown ###")
+    if aggregated_results:
+        for i, result in enumerate(aggregated_results):
+            claim_score_color = score_to_color(result.get('score', 0))
+            print(f"\n{i+1}. Claim: \"{result.get('claim', 'N/A')}\"")
+            print(f"    Analysis: {result.get('analysis', 'N/A')}")
+            print(f"    Score: {claim_score_color}")
+    else:
+        print("No individual claims were analyzed.")
+
+
+
+
+    print("\n" + "-"*60)
+    print("\n### Final Assessment ###")
+    print(f"\nOverall Summary: {final_summary}")
+    print(f"\nFinal Score: {final_color}")
+    print("="*60)
+
+
+
+
+"""
+  if __name__ == "__main__":
+    if asyncio.get_event_loop().is_running():
+       asyncio.ensure_future(run_credibility_agent(WEBSITE_TEXT_PROMPT))
+    else:
+        asyncio.run(run_credibility_agent(WEBSITE_TEXT_PROMPT))
 """
 
 def webagent(child_conn):
-    # Receive text from main.py
-    text = child_conn.recv()
-    print("received", text)
+    WEBSITE_TEXT_PROMPT = child_conn.recv()
+    if asyncio.get_event_loop().is_running():
+       asyncio.ensure_future(run_credibility_agent(WEBSITE_TEXT_PROMPT))
+    else:
+        asyncio.run(run_credibility_agent(WEBSITE_TEXT_PROMPT))
     child_conn.close()
-    
-    
+
+
+
+
