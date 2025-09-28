@@ -51,7 +51,7 @@ def parse_raw_claims(tool_context: ToolContext):
     raw_output = tool_context.state.get(STATE_RAW_CLAIMS_OUTPUT, "[]")
     
     try:
-        # Use regex to find and extract the outermost JSON array structure (the FIX for conversational models)
+        # Use regex to find and extract the outermost JSON array structure
         json_match = re.search(r'(\[.*\])', raw_output, re.DOTALL)
         
         if json_match:
@@ -65,7 +65,7 @@ def parse_raw_claims(tool_context: ToolContext):
         if not isinstance(claims_list, list):
             claims_list = [claims_list]
             
-        # Ensure every item in the list is explicitly converted to a string (the FIX for slicing errors)
+        # Ensure every item in the list is explicitly converted to a string
         claims_list = [str(item) for item in claims_list] 
 
         print(f"   [Tool Call] Successfully parsed {len(claims_list)} claims.")
