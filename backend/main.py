@@ -1,70 +1,52 @@
-import requests # pyright: ignore[reportMissingModuleSource]
-from bs4 import BeautifulSoup # pyright: ignore[reportMissingImports]
-from fastapi import FastAPI # pyright: ignore[reportMissingImports]
-from fastapi.middleware.cors import CORSMiddleware # pyright: ignore[reportMissingImports]
-from pydantic import BaseModel # pyright: ignore[reportMissingImports]
-from typing import Dict
+import requests
+from bs4 import BeautifulSoup
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import asyncio
+from run_agent import run_credibility_agent
 
-from multi_tool_agent.agent import root_agent
-
+# This line is essential for uvicorn to find the app
 app = FastAPI()
 
-headers = {'User-Agent': 'Mozilla/5.0'}
-
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+}
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  #later change to ["chrome-extension://abcd1234"]
+    allow_origins=["*"],  # Be more specific in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-class TextRequest(BaseModel):
-    text: str
-
 class URLrequest(BaseModel):
-    url:str
+    url: str
 
 @app.post("/process-url")
 async def process_url(request: URLrequest):
     url = request.url
     try:
-        # Parsing page with bs4
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
         html_content = response.text
         soup = BeautifulSoup(html_content, 'html.parser')
-        elementList = soup.find_all('p')
-        for ele in elementList:
-            print(ele.text) # Send to AI agent
-        print(f"Received URL: {url}")
 
-        response = requests.get(url, timeout=5)
-    except Exception as err:
-        return {"error": str(err)}
-    return {"received_url": request.url}
+        paragraphs = soup.find_all('p')
+        text_content = "\n".join([p.get_text() for p in paragraphs])
 
-@app.post("/process-text")
-async def process_text(request: TextRequest) -> Dict:
-    page_text = request.text
-    try:
-        agent_output = root_agent.execute(page_text)
+        if not text_content.strip():
+             return {"error": "Could not extract meaningful text from the URL."}
 
-        # Handle dict vs string
-        if isinstance(agent_output, dict):
-            summary = agent_output.get("output_text", str(agent_output))
-        else:
-            summary = str(agent_output)
+        analysis_result = await run_credibility_agent(text_content)
+        return analysis_result
 
-        return {"summary": summary}
-
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Error fetching URL: {e}"}
     except Exception as e:
-        return {"error": str(e)}
-    
+        return {"error": f"An unexpected error occurred: {e}"}
+
 @app.get("/")
 async def root():
-    return {"message": "Hello from FastAPI"}
-
-@app.get("/article")
-async def get_article():
-    return {"content": "This is text served from FastAPI!"}
+    return {"message": "FactCheck API is running"}

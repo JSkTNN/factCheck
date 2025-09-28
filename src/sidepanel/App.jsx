@@ -2,60 +2,106 @@ import React, { useEffect, useState } from 'react';
 import PageScanner from '@/components/PageScanner';
 import './App.css';
 
+// Simple CSS for the loading spinner
+const spinnerStyle = `
+  .loader {
+    border: 4px solid #f3f3f3; /* Light grey */
+    border-top: 4px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 2s linear infinite;
+    margin: 1rem auto;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
 export default function App() {
   const [url, setUrl] = useState('Loading...');
-  const [pageText, setPageText] = useState('');
-  const [summary, setSummary] = useState('');
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Get current tab URL via Chrome runtime
   useEffect(() => {
     if (!chrome?.runtime) {
       setUrl('Chrome API not available');
       return;
     }
-
     chrome.runtime.sendMessage({ type: 'GET_CURRENT_TAB_URL' }, (response) => {
       if (chrome.runtime.lastError) {
         console.error('Message failed:', chrome.runtime.lastError.message);
         setUrl('Failed to get URL');
         return;
       }
-
-      if (response?.url) {
-        setUrl(response.url);
-      } else {
-        setUrl('No URL found');
-      }
+      setUrl(response?.url || 'No URL found');
     });
   }, []);
 
-  return (
-    <div style={{ padding: '1rem', fontFamily: 'sans-serif' }}>
-      <h1 class = "gradient-text">Truth Meter</h1>
+  const handleScan = async () => {
+    setIsLoading(true);
+    setError(null);
+    setAnalysisResult(null);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/process-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setAnalysisResult(data);
+      }
+    } catch (err) {
+      console.error('Error sending URL:', err);
+      setError('Failed to connect to the backend. Is the server running?');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      {/* PageScanner handles scanning, but sends text & summary up to App */}
+  return (
+    <div style={{ padding: '1rem', fontFamily: 'sans-serif', textAlign: 'center' }}>
+      <style>{spinnerStyle}</style>
+      <h1 class="gradient-text">TruthMeter</h1>
       <PageScanner
         msg="Scan for credibility report."
         url={url}
-        onText={(text) => setPageText(text)}
-        onSummary={(summary) => setSummary(summary)}
+        onScan={handleScan}
+        loading={isLoading}
       />
-
-      {/* Echo the page text */}
-      {pageText && (
-        <div style={{ marginTop: '1rem' }}>
-          <h3>Page Text:</h3>
-          <pre style={{ maxHeight: '200px', overflow: 'auto', background: '#1a1a1a', color: '#fff', padding: '0.5rem' }}>
-            {pageText}
-          </pre>
+      
+      {isLoading && (
+        <div>
+          <div className="loader"></div>
+          <p>Analyzing...</p>
         </div>
       )}
 
-      {/* Display AI summary */}
-      {summary && (
-        <div style={{ marginTop: '1rem' }}>
-          <h3>AI Report:</h3>
-          <p>{summary}</p>
+      {error && <div style={{ color: 'red', marginTop: '1rem' }}>Error: {error}</div>}
+      
+      {analysisResult && (
+        <div style={{ marginTop: '1rem', textAlign: 'left' }}>
+          <h2>Analysis Complete</h2>
+          <h3>Final Score: {analysisResult.final_score}/100</h3>
+          <p>
+            <b>Summary:</b> {analysisResult.final_summary}
+          </p>
+          <h4>Claims Reviewed:</h4>
+          <ul style={{ paddingLeft: '20px' }}>
+            {analysisResult.claims.map((item, index) => (
+              <li key={index} style={{ marginBottom: '10px' }}>
+                <strong>Claim:</strong> {item.claim} <br />
+                <strong>Analysis:</strong> {item.analysis} <br />
+                <strong>Score:</strong> {item.score}/100
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
