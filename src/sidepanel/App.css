@@ -1,45 +1,107 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+ max-width: 1280px;
+ margin: 0 auto;
+ padding: 2rem;
+ text-align: center;
 }
 
 .logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+ height: 6em;
+ padding: 1.5em;
+ will-change: filter;
+ transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+ filter: drop-shadow(0 0 2em #646cffaa);
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+ filter: drop-shadow(0 0 2em #61dafbaa);
 }
 .logo.crx:hover {
-  filter: drop-shadow(0 0 2em #f2bae4aa);
+ filter: drop-shadow(0 0 2em #f2bae4aa);
 }
 
 @keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+ from {
+   transform: rotate(0deg);
+ }
+ to {
+   transform: rotate(360deg);
+ }
 }
 
+
 @media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+ a:nth-of-type(2) .logo {
+   animation: logo-spin infinite 20s linear;
+ }
 }
 
 .card {
-  padding: 2em;
+ padding: 2em;
 }
 
 .read-the-docs {
-  color: #888;
+ color: #888;
+}
+
+.btn {
+ width: 250px;
+ white-space: nowrap;
+ overflow: hidden;
+ text-overflow: ellipsis;
+ padding: 0.5rem;
+ outline: none;
+ transition: transform 0.15s ease;
+
+}
+
+
+.btn:hover {
+ transform: scale(1.05);
+ border-color: white;
+ outline: none;
+
+
+}
+
+
+.btn:active {
+ transform: scale(1.3);
+ box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+ outline: none;
+}
+.btn:focus {
+ outline: none;
+ box-shadow: none;
+}
+
+
+.gradient-text {
+ font-size: 4rem;
+ font-weight: bold;
+ text-shadow: 0 0 6px rgba(186, 173, 173, 0.532);
+
+
+ background: linear-gradient(
+   270deg,
+   #75c4e4,
+   #9685eb,
+   #4169E1,
+   #a0a3e3,
+   #7e168c
+ );
+ background-size: 400% 400%;
+ -webkit-background-clip: text;
+ background-clip: text;
+ -webkit-text-fill-color: transparent;
+ animation: gradientShift 12s ease infinite;
+
+
+}
+
+@keyframes gradientShift {
+ 0%   { background-position: 0% 50%; }
+ 50%  { background-position: 100% 50%; }
+ 100% { background-position: 0% 50%; }
 }

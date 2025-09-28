@@ -3,10 +3,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0];
       const url =
-        tab && tab.url && !tab.url.startsWith("chrome-extension://") ? tab.url : null;
-        sendResponse({ url });
+        tab && tab.url && !tab.url.startsWith("chrome-extension://")
+          ? tab.url
+          : null;
+      sendResponse({ url });
     });
     return true;
+  }
+});
+
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  const tab = await chrome.tabs.get(activeInfo.tabId);
+  if (tab.url && !tab.url.startsWith("chrome-extension://")) {
+    chrome.runtime.sendMessage({ type: "TAB_UPDATED", url: tab.url });
+  }
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (tab.active && changeInfo.status === "complete") {
+    if (tab.url && !tab.url.startsWith("chrome-extension://")) {
+      chrome.runtime.sendMessage({ type: "TAB_UPDATED", url: tab.url });
+    }
   }
 });
 
@@ -16,6 +33,5 @@ chrome.action.onClicked.addListener((tab) => {
     path: "src/sidepanel/index.html",
     enabled: true,
   });
-
   chrome.sidePanel.open({ tabId: tab.id });
 });
