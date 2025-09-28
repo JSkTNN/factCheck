@@ -25,6 +25,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       chrome.runtime.sendMessage({ type: "TAB_UPDATED", url: tab.url });
     }
   }
+  if (changeInfo.status === "complete" && /^https?:/.test(tab.url)) {
+    chrome.runtime.sendMessage({ type: "RESET_SCAN_BUTTON" });
+  }
 });
 
 chrome.action.onClicked.addListener((tab) => {

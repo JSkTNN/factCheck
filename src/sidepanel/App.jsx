@@ -26,6 +26,29 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+   useEffect(() => {
+    chrome.runtime.onMessage.addListener((message) => {
+      if (message.type === "TAB_UPDATED") {
+        setUrl(message.url);
+      }
+      if (message.type === "RESET_SCAN_BUTTON") {
+        setIsDisabled(false);
+    }
+    });
+
+    chrome.runtime.sendMessage({ type: "GET_CURRENT_TAB_URL" }, (response) => {
+      if (response?.url) setUrl(response.url);
+    });
+  }, []);
+
+
+    useEffect(() => {
+      fetch("http://127.0.0.1:8000/article") // Later change to Render link
+      .then(res => res.json())
+      .then(data => setArticle(data.content))
+      .catch(err => console.error("Error fetching:", err));
+  }, []);
+
   useEffect(() => {
     if (!chrome?.runtime) {
       setUrl('Chrome API not available');
@@ -68,9 +91,9 @@ export default function App() {
   return (
     <div style={{ padding: '1rem', fontFamily: 'sans-serif', textAlign: 'center' }}>
       <style>{spinnerStyle}</style>
-      <h1 class="gradient-text">TruthMeter</h1>
+      <h1 class='gradient-text'>Truth Meter</h1>
       <PageScanner
-        msg="Scan for credibility report."
+        msg="Scan this page for a credibility report."
         url={url}
         onScan={handleScan}
         loading={isLoading}
