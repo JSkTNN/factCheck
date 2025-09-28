@@ -1,69 +1,52 @@
-import requests # pyright: ignore[reportMissingModuleSource]
-from bs4 import BeautifulSoup # pyright: ignore[reportMissingImports]
-from fastapi import FastAPI # pyright: ignore[reportMissingImports]
-from fastapi.middleware.cors import CORSMiddleware # pyright: ignore[reportMissingImports]
-from pydantic import BaseModel # pyright: ignore[reportMissingImports]
-from multiprocessing import Pipe, Process
-from run_agent import webagent
-"""
+import requests
+from bs4 import BeautifulSoup
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import asyncio
+from run_agent import run_credibility_agent
+
+# This line is essential for uvicorn to find the app
 app = FastAPI()
 
-headers = {'User-Agent': 'Mozilla/5.0'}
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+}
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  #later change to ["chrome-extension://abcd1234"]
+    allow_origins=["*"],  # Be more specific in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 class URLrequest(BaseModel):
-    url:str
+    url: str
 
 @app.post("/process-url")
 async def process_url(request: URLrequest):
     url = request.url
     try:
-        # Parsing page with bs4
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
         html_content = response.text
         soup = BeautifulSoup(html_content, 'html.parser')
-        elementList = soup.find_all('p')
-        for ele in elementList:
-            print(ele.text) # Send to AI agent
-        print(f"Received URL: {url}")
 
-        response = requests.get(url, timeout=5)
-    except Exception as err:
-        return {"error": str(err)}
-    return {"received_url": request.url}
+        paragraphs = soup.find_all('p')
+        text_content = "\n".join([p.get_text() for p in paragraphs])
+
+        if not text_content.strip():
+             return {"error": "Could not extract meaningful text from the URL."}
+
+        analysis_result = await run_credibility_agent(text_content)
+        return analysis_result
+
+    except requests.exceptions.RequestException as e:
+        return {"error": f"Error fetching URL: {e}"}
+    except Exception as e:
+        return {"error": f"An unexpected error occurred: {e}"}
 
 @app.get("/")
 async def root():
-    return {"message": "Hello from FastAPI"}
-
-@app.get("/article")
-async def get_article():
-    return {"content": "This is text served from FastAPI!"}
-"""
-
-if __name__ == "__main__":
-    parent_conn, child_conn = Pipe()
-
-    p = Process(target=webagent, args=(child_conn,))
-    p.start()
-
-    text_to_send = (
-        "A recent study published in the New England Journal of Medicine has found that the experimental drug 'Cardia-7' "
-        "significantly reduces the risk of major cardiovascular events by up to 40 percent in high-risk patients. "
-        "The double-blind, placebo-controlled trial involved over 10,000 participants across 20 countries. "
-        "Lead researcher Dr. Alistair Finch stated, 'These results represent a monumental step forward in preventative cardiology.' "
-        "The study was funded by the National Institutes of Health and pharmaceutical company InnovateHealth."
-    )
-
-
-    print("Main.py sending text to agent...")
-    parent_conn.send(text_to_send)
-    p.join()
-    print("Agent finished processing.")
+    return {"message": "FactCheck API is running"}
