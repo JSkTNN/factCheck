@@ -1,3 +1,4 @@
+
 import asyncio
 import os
 import json
@@ -198,12 +199,14 @@ async def run_credibility_agent(website_text: str):
 
 def webagent(child_conn):
     WEBSITE_TEXT_PROMPT = child_conn.recv()
+    
     if asyncio.get_event_loop().is_running():
        asyncio.ensure_future(run_credibility_agent(WEBSITE_TEXT_PROMPT))
     else:
         asyncio.run(run_credibility_agent(WEBSITE_TEXT_PROMPT))
     child_conn.close()
 
-
-
-
+    #if asyncio.get_event_loop().is_running():
+       #asyncio.ensure_future(run_credibility_agent(WEBSITE_TEXT_PROMPT))
+    #else:
+        #asyncio.run(run_credibility_agent(WEBSITE_TEXT_PROMPT))
