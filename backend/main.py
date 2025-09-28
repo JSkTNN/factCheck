@@ -5,10 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware # pyright: ignore[reportMissi
 from pydantic import BaseModel # pyright: ignore[reportMissingImports]
 from typing import Dict
 
+from multi_tool_agent.agent import root_agent
 
 app = FastAPI()
 
 headers = {'User-Agent': 'Mozilla/5.0'}
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,12 +46,21 @@ async def process_url(request: URLrequest):
 
 @app.post("/process-text")
 async def process_text(request: TextRequest) -> Dict:
-    # This is where you send the text to your AI ADK
     page_text = request.text
-    # For now, just return a dummy summary
-    summary = f"Received {len(page_text)} characters of text."
-    return {"summary": summary}
+    try:
+        agent_output = root_agent.execute(page_text)
 
+        # Handle dict vs string
+        if isinstance(agent_output, dict):
+            summary = agent_output.get("output_text", str(agent_output))
+        else:
+            summary = str(agent_output)
+
+        return {"summary": summary}
+
+    except Exception as e:
+        return {"error": str(e)}
+    
 @app.get("/")
 async def root():
     return {"message": "Hello from FastAPI"}
