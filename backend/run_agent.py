@@ -9,7 +9,7 @@ from google.genai import errors
 import sys
 
 # --- Import ADK Agents, Constants, and Tools ---
-from agent_def.agent import (
+from agent import (
     root_agent,
     STATE_WEBSITE_TEXT,
     STATE_AGGREGATED_RESULTS,
